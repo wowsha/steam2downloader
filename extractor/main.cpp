@@ -24,6 +24,7 @@ struct Options {
     std::uint32_t version{};
     std::optional<std::uint32_t> blob_crc;
     bool list_only{};
+    bool legacy_cli{};
 };
 
 [[noreturn]] void usage(std::string_view message = {}) {
@@ -33,12 +34,13 @@ struct Options {
     std::cerr
         << "Steam2 native extractor\n\n"
         << "usage:\n"
-        << "  steam2extract --blobs DIR --dats DIR --depot ID --version N"
+        << "  extract BLOB_DIR DAT_DIR DEPOT VERSION [--blobcrc HEX]\n"
+        << "  extract --blobs DIR --dats DIR --depot ID --version N"
            " --output DIR [--blobcrc HEX]\n"
-        << "  steam2extract --blobs DIR --dats DIR --depot ID --version N --list"
+        << "  extract --blobs DIR --dats DIR --depot ID --version N --list"
            " [--blobcrc HEX]\n\n"
-        << "The blobs/ and dats/ directories should contain the downloaded"
-           " Steam2 archive files.\n";
+        << "The legacy positional form is compatible with steam2downloader's"
+           " existing GUI hook. It writes to DAT_DIR/../extracted/DEPOT_VERSION.\n";
     throw std::runtime_error("invalid command line");
 }
 
@@ -51,8 +53,49 @@ std::uint32_t parse_u32(std::string_view text, std::string_view option, int base
     return value;
 }
 
+std::optional<std::uint32_t> parse_blob_crc(std::string_view text) {
+    std::string value(text);
+    if (value.starts_with("0x") || value.starts_with("0X")) {
+        value.erase(0, 2);
+    }
+    if (value.size() != 8) {
+        usage("--blobcrc must be exactly 8 hexadecimal digits");
+    }
+    return parse_u32(value, "--blobcrc", 16);
+}
+
 Options parse_options(int argc, char** argv) {
     Options options;
+
+    // Preserve the exact command contract used by the original
+    // steam2downloader GUI:
+    //   extract <blobs> <dats> <depot> <version> [--blobcrc CRC]
+    if (argc >= 5 && argv[1][0] != '-') {
+        options.legacy_cli = true;
+        options.blobs = argv[1];
+        options.dats = argv[2];
+        options.depot = parse_u32(argv[3], "depot", 10);
+        options.version = parse_u32(argv[4], "version", 10);
+
+        for (int index = 5; index < argc; ++index) {
+            const std::string_view arg(argv[index]);
+            if (arg == "--blobcrc") {
+                if (++index >= argc) usage("--blobcrc is missing its value");
+                options.blob_crc = parse_blob_crc(argv[index]);
+            } else if (arg == "--list") {
+                options.list_only = true;
+            } else if (arg == "--help" || arg == "-h") {
+                usage();
+            } else {
+                usage("unknown legacy option: " + std::string(arg));
+            }
+        }
+
+        const fs::path parent = options.dats.parent_path();
+        options.output = parent / "extracted" /
+            (std::to_string(options.depot) + "_" + std::to_string(options.version));
+        return options;
+    }
 
     auto require_value = [&](int& index, std::string_view option) -> std::string_view {
         if (++index >= argc) {
@@ -74,14 +117,7 @@ Options parse_options(int argc, char** argv) {
         } else if (arg == "--output") {
             options.output = require_value(index, arg);
         } else if (arg == "--blobcrc") {
-            std::string value(require_value(index, arg));
-            if (value.starts_with("0x") || value.starts_with("0X")) {
-                value.erase(0, 2);
-            }
-            if (value.size() != 8) {
-                usage("--blobcrc must be exactly 8 hexadecimal digits");
-            }
-            options.blob_crc = parse_u32(value, arg, 16);
+            options.blob_crc = parse_blob_crc(require_value(index, arg));
         } else if (arg == "--list") {
             options.list_only = true;
         } else if (arg == "--help" || arg == "-h") {
@@ -123,7 +159,7 @@ fs::path safe_relative_path(const std::string& archive_path) {
         if (is_bad_component(component)) {
             throw std::runtime_error("unsafe archive path: " + archive_path);
         }
-        result /= fs::path(component);
+        result /= fs::path(std::string(component));
         if (slash == std::string::npos) break;
         start = slash + 1;
     }
