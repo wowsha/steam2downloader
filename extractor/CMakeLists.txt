@@ -47,6 +47,10 @@ else()
 endif()
 
 add_executable(steam2extract main.cpp)
+# Keep the old GUI's extractor discovery/command contract working. The
+# Python launcher searches for "extract" / "extract.exe" and invokes it as:
+#   extract <blobs> <dats> <depot> <version> [--blobcrc HEX]
+set_target_properties(steam2extract PROPERTIES OUTPUT_NAME extract)
 target_link_libraries(steam2extract PRIVATE steam2core)
 
 if(MSVC)
