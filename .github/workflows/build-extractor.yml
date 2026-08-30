@@ -7,6 +7,9 @@ on:
 permissions:
   contents: write
 
+env:
+  NIGHTLY_TAG: steam2tool-nightly
+
 jobs:
   linux:
     name: Linux x64
@@ -32,8 +35,10 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view steam2tool-nightly >/dev/null 2>&1 || gh release create steam2tool-nightly --title 'Steam2 Tool Nightly' --notes 'Automated native builds from main.' --prerelease --target "$GITHUB_SHA"
-          gh release upload steam2tool-nightly steam2tool-linux-x64.tar.gz --clobber
+          gh release view "$NIGHTLY_TAG" >/dev/null 2>&1 || gh release create "$NIGHTLY_TAG" --title 'Steam2 Tool Nightly' --notes 'Automated native builds from main.' --prerelease --target "$GITHUB_SHA"
+          gh release delete "$NIGHTLY_TAG" --yes --cleanup-tag >/dev/null 2>&1 || true
+          gh release create "$NIGHTLY_TAG" --title 'Steam2 Tool Nightly' --notes 'Automated native builds from main.' --prerelease --target "$GITHUB_SHA"
+          gh release upload "$NIGHTLY_TAG" steam2tool-linux-x64.tar.gz --clobber
 
   windows:
     name: Windows x64
@@ -61,6 +66,11 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          gh release view steam2tool-nightly *> $null
-          if ($LASTEXITCODE -ne 0) { gh release create steam2tool-nightly --title 'Steam2 Tool Nightly' --notes 'Automated native builds from main.' --prerelease --target $env:GITHUB_SHA }
-          gh release upload steam2tool-nightly .\steam2tool-windows-x64.zip --clobber
+          $ready = $false
+          for ($i = 0; $i -lt 60; $i++) {
+            gh release view "$env:NIGHTLY_TAG" *> $null
+            if ($LASTEXITCODE -eq 0) { $ready = $true; break }
+            Start-Sleep -Seconds 2
+          }
+          if (-not $ready) { throw 'Nightly release was not created by the Linux job.' }
+          gh release upload "$env:NIGHTLY_TAG" .\steam2tool-windows-x64.zip --clobber
