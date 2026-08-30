@@ -4,6 +4,9 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   linux:
     name: Linux x64
@@ -22,6 +25,15 @@ jobs:
         run: |
           test -x build/steam2tool
           test -x build/steam2tool-gui
+      - name: Package Linux
+        run: tar -C build -czf steam2tool-linux-x64.tar.gz steam2tool steam2tool-gui
+      - name: Publish nightly Linux release asset
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view steam2tool-nightly >/dev/null 2>&1 || gh release create steam2tool-nightly --title 'Steam2 Tool Nightly' --notes 'Automated native builds from main.' --prerelease --target "$GITHUB_SHA"
+          gh release upload steam2tool-nightly steam2tool-linux-x64.tar.gz --clobber
 
   windows:
     name: Windows x64
@@ -40,3 +52,15 @@ jobs:
         run: |
           if (-not (Test-Path .\build\Release\steam2tool.exe)) { throw 'steam2tool.exe was not produced' }
           if (-not (Test-Path .\build\Release\steam2tool-gui.exe)) { throw 'steam2tool-gui.exe was not produced' }
+      - name: Package Windows
+        shell: pwsh
+        run: Compress-Archive -Path .\build\Release\steam2tool.exe, .\build\Release\steam2tool-gui.exe -DestinationPath .\steam2tool-windows-x64.zip
+      - name: Publish nightly Windows release asset
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: pwsh
+        run: |
+          gh release view steam2tool-nightly *> $null
+          if ($LASTEXITCODE -ne 0) { gh release create steam2tool-nightly --title 'Steam2 Tool Nightly' --notes 'Automated native builds from main.' --prerelease --target $env:GITHUB_SHA }
+          gh release upload steam2tool-nightly .\steam2tool-windows-x64.zip --clobber
