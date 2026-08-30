@@ -1,4 +1,4 @@
-name: Build native extractor
+name: Build native Steam2 tool
 
 on:
   push:
@@ -6,41 +6,41 @@ on:
 
 jobs:
   linux:
-    name: Linux
+    name: Linux x64
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S extractor -B extractor/build -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
-        run: cmake --build extractor/build --parallel 2
-      - name: Smoke test help
-        run: ./extractor/build/extract --help
+        run: cmake --build build --parallel 2
+      - name: Smoke test
+        run: ./build/steam2tool --help
       - name: Verify binary
-        run: test -x extractor/build/extract
-      - name: Upload Linux extractor
+        run: test -x build/steam2tool
+      - name: Upload Linux binary
         uses: actions/upload-artifact@v4
         with:
-          name: steam2extract-linux-x64
-          path: extractor/build/extract
+          name: steam2tool-linux-x64
+          path: build/steam2tool
 
   windows:
-    name: Windows
+    name: Windows x64
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
       - name: Configure
-        run: cmake -S extractor -B extractor/build -A x64
+        run: cmake -S . -B build -A x64
       - name: Build
-        run: cmake --build extractor/build --config Release --parallel 2
-      - name: Smoke test help
+        run: cmake --build build --config Release --parallel 2
+      - name: Smoke test
         shell: pwsh
-        run: .\extractor\build\Release\extract.exe --help
+        run: .\build\Release\steam2tool.exe --help
       - name: Verify binary
         shell: pwsh
-        run: if (-not (Test-Path .\extractor\build\Release\extract.exe)) { throw 'extract.exe was not produced' }
-      - name: Upload Windows extractor
+        run: if (-not (Test-Path .\build\Release\steam2tool.exe)) { throw 'steam2tool.exe was not produced' }
+      - name: Upload Windows binary
         uses: actions/upload-artifact@v4
         with:
-          name: steam2extract-windows-x64
-          path: extractor/build/Release/extract.exe
+          name: steam2tool-windows-x64
+          path: build/Release/steam2tool.exe
