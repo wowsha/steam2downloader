@@ -55,4 +55,4 @@ A single native binary now owns the full pipeline:
 
 `bulk index -> depot/version catalogue -> download -> Steam2 ancestry resolution -> decode -> extracted files`
 
-The Steam2 decoding core is taken from the pinned `dr3murr/steam2-winfsp` implementation. Its source is fetched only as a library component; the project's GUI/FUSE application is not configured or built.
+The Steam2 decoding core is taken from the pinned `dr3murr/steam2-winfsp` implementation. Its source is fetched only as a library component; the project's GUI/FUSE application is not configured or built. 
