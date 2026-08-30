@@ -1,0 +1,17 @@
+name: Build native extractor
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S extractor -B extractor/build -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build extractor/build --parallel 2
+      - name: Smoke test help
+        run: extractor/build/steam2extract --help
