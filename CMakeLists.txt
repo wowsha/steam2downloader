@@ -24,7 +24,10 @@ FetchContent_Declare(
     GIT_TAG 2ad9e9d765aad349bfd3f1bd7e46533062bdb1f5
     GIT_SHALLOW TRUE
 )
-FetchContent_MakeAvailable(steam2_impl)
+FetchContent_GetProperties(steam2_impl)
+if(NOT steam2_impl_POPULATED)
+    FetchContent_Populate(steam2_impl)
+endif()
 
 add_library(steam2core STATIC
     ${steam2_impl_SOURCE_DIR}/src/steam2_archive.cpp
