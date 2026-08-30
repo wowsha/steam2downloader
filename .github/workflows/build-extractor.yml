@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Install GUI dependencies
+        run: sudo apt-get update && sudo apt-get install -y libx11-dev libxext-dev libxft-dev libxinerama-dev libxcursor-dev libxfixes-dev libxrender-dev
       - name: Configure
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
@@ -20,13 +22,6 @@ jobs:
         run: |
           test -x build/steam2tool
           test -x build/steam2tool-gui
-      - name: Upload Linux binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: steam2tool-linux-x64
-          path: |
-            build/steam2tool
-            build/steam2tool-gui
 
   windows:
     name: Windows x64
@@ -45,10 +40,3 @@ jobs:
         run: |
           if (-not (Test-Path .\build\Release\steam2tool.exe)) { throw 'steam2tool.exe was not produced' }
           if (-not (Test-Path .\build\Release\steam2tool-gui.exe)) { throw 'steam2tool-gui.exe was not produced' }
-      - name: Upload Windows binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: steam2tool-windows-x64
-          path: |
-            build/Release/steam2tool.exe
-            build/Release/steam2tool-gui.exe
