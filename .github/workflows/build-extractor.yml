@@ -5,7 +5,8 @@ on:
   pull_request:
 
 jobs:
-  build:
+  linux:
+    name: Linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -14,4 +15,32 @@ jobs:
       - name: Build
         run: cmake --build extractor/build --parallel 2
       - name: Smoke test help
-        run: extractor/build/steam2extract --help
+        run: ./extractor/build/extract --help
+      - name: Verify binary
+        run: test -x extractor/build/extract
+      - name: Upload Linux extractor
+        uses: actions/upload-artifact@v4
+        with:
+          name: steam2extract-linux-x64
+          path: extractor/build/extract
+
+  windows:
+    name: Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S extractor -B extractor/build -A x64
+      - name: Build
+        run: cmake --build extractor/build --config Release --parallel 2
+      - name: Smoke test help
+        shell: pwsh
+        run: .\extractor\build\Release\extract.exe --help
+      - name: Verify binary
+        shell: pwsh
+        run: if (-not (Test-Path .\extractor\build\Release\extract.exe)) { throw 'extract.exe was not produced' }
+      - name: Upload Windows extractor
+        uses: actions/upload-artifact@v4
+        with:
+          name: steam2extract-windows-x64
+          path: extractor/build/Release/extract.exe
