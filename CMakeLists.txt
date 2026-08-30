@@ -10,24 +10,11 @@ include(FetchContent)
 set(ZLIB_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(ZLIB_BUILD_SHARED OFF CACHE BOOL "" FORCE)
 set(ZLIB_BUILD_STATIC ON CACHE BOOL "" FORCE)
-FetchContent_Declare(
-    zlib
-    GIT_REPOSITORY https://github.com/madler/zlib.git
-    GIT_TAG v1.3.1
-    GIT_SHALLOW TRUE
-)
+FetchContent_Declare(zlib GIT_REPOSITORY https://github.com/madler/zlib.git GIT_TAG v1.3.1 GIT_SHALLOW TRUE)
 FetchContent_MakeAvailable(zlib)
 
-FetchContent_Declare(
-    steam2_impl
-    GIT_REPOSITORY https://github.com/dr3murr/steam2-winfsp.git
-    GIT_TAG 2ad9e9d765aad349bfd3f1bd7e46533062bdb1f5
-    GIT_SHALLOW TRUE
-)
-FetchContent_GetProperties(steam2_impl)
-if(NOT steam2_impl_POPULATED)
-    FetchContent_Populate(steam2_impl)
-endif()
+FetchContent_Declare(steam2_impl GIT_REPOSITORY https://github.com/dr3murr/steam2-winfsp.git GIT_TAG 2ad9e9d765aad349bfd3f1bd7e46533062bdb1f5 GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(steam2_impl)
 
 add_library(steam2core STATIC
     ${steam2_impl_SOURCE_DIR}/src/steam2_archive.cpp
@@ -46,13 +33,30 @@ endif()
 
 add_executable(steam2tool steam2tool.cpp)
 target_link_libraries(steam2tool PRIVATE steam2core)
-set_target_properties(steam2tool PROPERTIES OUTPUT_NAME steam2tool)
+
+# Cross-platform native GUI. This is C++/FLTK only; no Python or Tkinter.
+set(FLTK_BUILD_TEST OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_FLUID OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_FORMS OFF CACHE BOOL "" FORCE)
+set(FLTK_BUILD_GL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(fltk GIT_REPOSITORY https://github.com/fltk/fltk.git GIT_TAG release-1.4.4 GIT_SHALLOW TRUE)
+FetchContent_MakeAvailable(fltk)
+
+if(WIN32)
+    add_executable(steam2tool-gui WIN32 steam2tool_gui.cpp)
+else()
+    add_executable(steam2tool-gui steam2tool_gui.cpp)
+endif()
+target_link_libraries(steam2tool-gui PRIVATE fltk::fltk)
 
 if(MSVC)
     target_compile_options(steam2tool PRIVATE /W4 /permissive- /EHsc)
+    target_compile_options(steam2tool-gui PRIVATE /W4 /permissive- /EHsc)
 else()
     target_compile_options(steam2tool PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(steam2tool-gui PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 include(GNUInstallDirs)
-install(TARGETS steam2tool RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION .)
+install(TARGETS steam2tool steam2tool-gui RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} BUNDLE DESTINATION .)
