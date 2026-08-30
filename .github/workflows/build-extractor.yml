@@ -14,15 +14,19 @@ jobs:
         run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
       - name: Build
         run: cmake --build build --parallel 2
-      - name: Smoke test
+      - name: Smoke test CLI
         run: ./build/steam2tool --help
-      - name: Verify binary
-        run: test -x build/steam2tool
-      - name: Upload Linux binary
+      - name: Verify CLI and GUI
+        run: |
+          test -x build/steam2tool
+          test -x build/steam2tool-gui
+      - name: Upload Linux binaries
         uses: actions/upload-artifact@v4
         with:
           name: steam2tool-linux-x64
-          path: build/steam2tool
+          path: |
+            build/steam2tool
+            build/steam2tool-gui
 
   windows:
     name: Windows x64
@@ -33,14 +37,18 @@ jobs:
         run: cmake -S . -B build -A x64
       - name: Build
         run: cmake --build build --config Release --parallel 2
-      - name: Smoke test
+      - name: Smoke test CLI
         shell: pwsh
         run: .\build\Release\steam2tool.exe --help
-      - name: Verify binary
+      - name: Verify CLI and GUI
         shell: pwsh
-        run: if (-not (Test-Path .\build\Release\steam2tool.exe)) { throw 'steam2tool.exe was not produced' }
-      - name: Upload Windows binary
+        run: |
+          if (-not (Test-Path .\build\Release\steam2tool.exe)) { throw 'steam2tool.exe was not produced' }
+          if (-not (Test-Path .\build\Release\steam2tool-gui.exe)) { throw 'steam2tool-gui.exe was not produced' }
+      - name: Upload Windows binaries
         uses: actions/upload-artifact@v4
         with:
           name: steam2tool-windows-x64
-          path: build/Release/steam2tool.exe
+          path: |
+            build/Release/steam2tool.exe
+            build/Release/steam2tool-gui.exe
